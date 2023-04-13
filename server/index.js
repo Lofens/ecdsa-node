@@ -2,14 +2,17 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3042;
+const { toHex } = require("ethereum-cryptography/utils");
+const { recoverPublicKey } = require("ethereum-cryptography/secp256k1");
+const { keccak256 } = require("ethereum-cryptography/keccak");
 
 app.use(cors());
 app.use(express.json());
 
 const balances = {
-  "0x1": 100,
-  "0x2": 50,
-  "0x3": 75,
+  "0xaa9c7dfb18bfe50e0cb7e2d5b5ab50403d1a9da1": 100, //private: 6e469484d338065091923113ead64f27315692b2f527045ceb42d3fb54b99cb7
+  "0xbdf314a464b5b93710dbf227e3d9dac197cbb27a": 50, //private: 03e1aca8fab8dc6497fe26640cefcc208bc994d2c377490ac9eb0f90c002ceb0
+  "0xfc2d6f6538bfc4ac86e425b49f844c65fd5d9c7d": 75, //private: ae40778354fa85927e46799c1b50ad65a85f17df6d75ac6ac1b187d8bb445a7a
 };
 
 app.get("/balance/:address", (req, res) => {
@@ -19,7 +22,13 @@ app.get("/balance/:address", (req, res) => {
 });
 
 app.post("/send", (req, res) => {
-  const { sender, recipient, amount } = req.body;
+  // TODO: get a signature from the client-side application
+  // recover the public address from the signature
+
+  const { recipient, amount, signatureObj } = req.body;
+
+  const recoveredPublicKey = recoverPublicKey(signatureObj.hashedMessage, signatureObj.signature, 0);
+  const sender = '0x' + toHex(keccak256(recoveredPublicKey.slice(1)).slice(-20));
 
   setInitialBalance(sender);
   setInitialBalance(recipient);
