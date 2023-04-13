@@ -1,27 +1,50 @@
 import { useState } from "react";
 import server from "./server";
 
-function Transfer({ address, setBalance }) {
+function Transfer({ address, setBalance, shouldSign, setShouldSign, signatureObj, setSignatureObj }) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const setValue = (setter) => (evt) => setter(evt.target.value);
 
   async function transfer(evt) {
     evt.preventDefault();
 
+    if (!shouldSign) {
+      await requestSignature(evt);
+
+      return;
+    }
+
+    const signatureHex = signatureObj.signatureHex;
+
+    if (signatureHex === "") {
+      setErrorMessage("Please sign the transaction first");
+      return;
+    }
+
     try {
       const {
         data: { balance },
       } = await server.post(`send`, {
-        sender: address,
         amount: parseInt(sendAmount),
         recipient,
+        signatureObj
       });
+
+      // Reset after success
       setBalance(balance);
+      setSignatureObj({});
+      setShouldSign(false);
     } catch (ex) {
+      console.log(ex);
       alert(ex.response.data.message);
     }
+  }
+
+  async function requestSignature(event) {
+    setShouldSign(true);
   }
 
   return (
@@ -46,7 +69,15 @@ function Transfer({ address, setBalance }) {
         ></input>
       </label>
 
-      <input type="submit" className="button" value="Transfer" />
+      {shouldSign ? (
+        <input type="submit" className="button" value="Transfer" />
+      ) : (
+        <input type="submit" className="button" value="Sign Transaction" />
+      )}
+
+      <label>
+        {errorMessage}
+      </label>
     </form>
   );
 }
