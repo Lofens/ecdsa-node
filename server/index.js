@@ -25,6 +25,10 @@ app.post("/send", (req, res) => {
   // TODO: get a signature from the client-side application
   // recover the public address from the signature
 
+
+  // Good examples I found afterwards:
+  // https://www.youtube.com/watch?v=Dx5mqoEGpLo
+
   const { recipient, amount, signatureObj } = req.body;
 
   const recoveredPublicKey = recoverPublicKey(signatureObj.hashedMessage, signatureObj.signature, 0);
