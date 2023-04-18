@@ -6,13 +6,15 @@ const { toHex } = require("ethereum-cryptography/utils");
 const { recoverPublicKey } = require("ethereum-cryptography/secp256k1");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 
+require('dotenv').config();
+
 app.use(cors());
 app.use(express.json());
 
 const balances = {
-  "0xaa9c7dfb18bfe50e0cb7e2d5b5ab50403d1a9da1": 100, //private: 6e469484d338065091923113ead64f27315692b2f527045ceb42d3fb54b99cb7
-  "0xbdf314a464b5b93710dbf227e3d9dac197cbb27a": 50, //private: 03e1aca8fab8dc6497fe26640cefcc208bc994d2c377490ac9eb0f90c002ceb0
-  "0xfc2d6f6538bfc4ac86e425b49f844c65fd5d9c7d": 75, //private: ae40778354fa85927e46799c1b50ad65a85f17df6d75ac6ac1b187d8bb445a7a
+  "0xaa9c7dfb18bfe50e0cb7e2d5b5ab50403d1a9da1": 100,
+  "0xbdf314a464b5b93710dbf227e3d9dac197cbb27a": 50,
+  "0xfc2d6f6538bfc4ac86e425b49f844c65fd5d9c7d": 75,
 };
 
 app.get("/balance/:address", (req, res) => {
@@ -28,6 +30,12 @@ app.post("/send", (req, res) => {
 
   // Good examples I found afterwards:
   // https://www.youtube.com/watch?v=Dx5mqoEGpLo
+
+  // Pointers:
+  // - Create unique element in the hashed message (store # of transactions on server and add 1 each successful transaction) - unable to replay the same signature
+  // - Create hashed message using a json object with {sender, amount, unique id, recipient} - can rebuild this on the server
+  // - Private keys in .env files and add it to .gitignore
+
 
   const { recipient, amount, signatureObj } = req.body;
 

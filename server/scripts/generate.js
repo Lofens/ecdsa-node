@@ -2,6 +2,7 @@ const secp = require("ethereum-cryptography/secp256k1");
 const { toHex, utf8ToBytes, hexToBytes } = require("ethereum-cryptography/utils");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 const { recoverPublicKey } = require("ethereum-cryptography/secp256k1");
+require('dotenv').config();
 
 const privateKey = secp.utils.randomPrivateKey();
 
@@ -13,9 +14,8 @@ const publicKeyCheck = (privateKey) => {
 
 async function testRecoverySignature() {
     // Keys
-    const testPrivateKey = "616E6769652E6A6A706572657A616775696E6167612E6574682E6C696E6B0D0A"; // public: 0x17A98d2b11Dfb784e63337d2170e21cf5DD04631
-    const privateKey = testPrivateKey;
-    const publicKey = "17A98d2b11Dfb784e63337d2170e21cf5DD04631";
+    const privateKey = ""; // private key
+    const publicKey = ""; // public key without 0x
 
     // Hash Message
     const someMessage = "SomeMessage";
