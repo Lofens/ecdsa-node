@@ -31,10 +31,10 @@ app.post("/send", (req, res) => {
   // Good examples I found afterwards:
   // https://www.youtube.com/watch?v=Dx5mqoEGpLo
 
-  // Pointers:
+  // Pointers TODO:
   // - Create unique element in the hashed message (store # of transactions on server and add 1 each successful transaction) - unable to replay the same signature
   // - Create hashed message using a json object with {sender, amount, unique id, recipient} - can rebuild this on the server
-  // - Private keys in .env files and add it to .gitignore
+
 
 
   const { recipient, amount, signatureObj } = req.body;
