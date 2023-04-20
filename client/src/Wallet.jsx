@@ -4,7 +4,7 @@ import { toHex, utf8ToBytes, hexToBytes } from "ethereum-cryptography/utils";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import * as secp from "ethereum-cryptography/secp256k1";
 
-function Wallet({ address, setAddress, balance, setBalance, shouldSign, signatureObj, setSignatureObj }) {
+function Wallet({ address, setAddress, balance, setBalance, signature, setSignature, nonce, setNonce, amount, setAmount, recipient, setResipient, setRecoveryBit}) {
   const [privateKey, setPrivateKey] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
 
@@ -12,10 +12,11 @@ function Wallet({ address, setAddress, balance, setBalance, shouldSign, signatur
     const address = evt.target.value;
     setAddress(address);
     if (address) {
-      const {
-        data: { balance },
-      } = await server.get(`balance/${address}`);
+      const { data: { balance } } = await server.get(`balance/${address}`);
       setBalance(balance);
+
+      const { data: { nonce } } = await server.get(`nonce/${address}`);
+      setNonce(nonce);
     } else {
       setBalance(0);
     }
@@ -28,29 +29,41 @@ function Wallet({ address, setAddress, balance, setBalance, shouldSign, signatur
     setPrivateKey(privateKey);
   }
 
-  async function sign(evt) {
-    evt.preventDefault();
+  async function createSignature(event) {
+    event.preventDefault();
 
-    if (shouldSign) {
-      const hashedMessage = keccak256(utf8ToBytes("someMessage"));
+    const allFieldsAreFilled = address !== "" && privateKey !== "" && amount > 0 && recipient !== "" && nonce >= 0;
+
+    if (allFieldsAreFilled) {
+      setInfoMessage("");
 
       try {
-        const signature = await secp.sign(hashedMessage, privateKey);
-        const signatureObj = {
-          signature: toHex(signature),
-          hashedMessage: toHex(hashedMessage)
-        }
+        const signature = await secp.sign(getHashedTransactionMessage(), privateKey, { recovered: true });
 
-        setSignatureObj(signatureObj);
-        setInfoMessage("Signed! Continue with Transfer");
-      } catch (e) {
-        setInfoMessage("Invalid private key");
+        setSignature(signature[0].toString());
+        setRecoveryBit(signature[1].toString());
+        setInfoMessage("Signature created successfully");
+      } catch(e){
+        setInfoMessage(e.message);
       }
+    } else {
+      setInfoMessage("Please fill all fields to generate a signature");
     }
   }
 
+  function getHashedTransactionMessage() {
+    const message = JSON.stringify({
+        sender: address.toLowerCase(),
+        amount: parseInt(amount),
+        nonce: parseInt(nonce) + 1,
+        recipient: recipient.toLowerCase()
+      });
+
+    return keccak256(utf8ToBytes(message));
+  }
+
   return (
-    <form className="container transfer" onSubmit={sign}>
+    <form className="container transfer" onSubmit={createSignature}>
       <h1>Your Wallet</h1>
 
       <label>
@@ -60,7 +73,7 @@ function Wallet({ address, setAddress, balance, setBalance, shouldSign, signatur
 
       <div className="balance">Balance: {balance}</div>
 
-      {shouldSign ? (
+      {/* {signature === "" ? ( */}
         <label>
           Sign using Wallet Private Key
           <input placeholder="Type your private key hex" value={privateKey} onChange={onChangePrivateKey}></input>
@@ -70,9 +83,9 @@ function Wallet({ address, setAddress, balance, setBalance, shouldSign, signatur
             {infoMessage}
           </label>
         </label>
-      ) : (
+      {/* ) : (
         <div></div>
-      )}
+      )} */}
     </form>
   );
 }

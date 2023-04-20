@@ -1,9 +1,7 @@
 import { useState } from "react";
 import server from "./server";
 
-function Transfer({ address, setBalance, shouldSign, setShouldSign, signatureObj, setSignatureObj }) {
-  const [sendAmount, setSendAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
+function Transfer({ address, setBalance, signature, setSignature, recipient, setRecipient, amount, setAmount, recoveryBit, setNonce }) {
   const [errorMessage, setErrorMessage] = useState("");
 
   const setValue = (setter) => (evt) => setter(evt.target.value);
@@ -11,40 +9,29 @@ function Transfer({ address, setBalance, shouldSign, setShouldSign, signatureObj
   async function transfer(evt) {
     evt.preventDefault();
 
-    if (!shouldSign) {
-      await requestSignature(evt);
-
-      return;
-    }
-
-    const signatureHex = signatureObj.signatureHex;
-
-    if (signatureHex === "") {
+    if (signature !== "" && signature instanceof Int8Array) {
       setErrorMessage("Please sign the transaction first");
+
       return;
     }
 
     try {
       const {
-        data: { balance },
+        data: { balance, nonce },
       } = await server.post(`send`, {
-        amount: parseInt(sendAmount),
+        sender: address,
         recipient,
-        signatureObj
+        amount: parseInt(amount),
+        signature,
+        recoveryBit
       });
 
-      // Reset after success
       setBalance(balance);
-      setSignatureObj({});
-      setShouldSign(false);
+      setNonce(nonce);
     } catch (ex) {
       console.log(ex);
       alert(ex.response.data.message);
     }
-  }
-
-  async function requestSignature(event) {
-    setShouldSign(true);
   }
 
   return (
@@ -55,8 +42,8 @@ function Transfer({ address, setBalance, shouldSign, setShouldSign, signatureObj
         Send Amount
         <input
           placeholder="1, 2, 3..."
-          value={sendAmount}
-          onChange={setValue(setSendAmount)}
+          value={amount}
+          onChange={setValue(setAmount)}
         ></input>
       </label>
 
@@ -69,11 +56,11 @@ function Transfer({ address, setBalance, shouldSign, setShouldSign, signatureObj
         ></input>
       </label>
 
-      {shouldSign ? (
+      {/* {signature === "" ? ( */}
         <input type="submit" className="button" value="Transfer" />
-      ) : (
+      {/* ) : (
         <input type="submit" className="button" value="Sign Transaction" />
-      )}
+      )} */}
 
       <label>
         {errorMessage}

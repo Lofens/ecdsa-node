@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3042;
-const { toHex } = require("ethereum-cryptography/utils");
+const { toHex, utf8ToBytes } = require("ethereum-cryptography/utils");
 const { recoverPublicKey } = require("ethereum-cryptography/secp256k1");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 
@@ -17,10 +17,22 @@ const balances = {
   "0xfc2d6f6538bfc4ac86e425b49f844c65fd5d9c7d": 75,
 };
 
+const nonces = {
+  "0xaa9c7dfb18bfe50e0cb7e2d5b5ab50403d1a9da1": 0,
+  "0xbdf314a464b5b93710dbf227e3d9dac197cbb27a": 2,
+  "0xfc2d6f6538bfc4ac86e425b49f844c65fd5d9c7d": 3,
+}
+
 app.get("/balance/:address", (req, res) => {
   const { address } = req.params;
   const balance = balances[address] || 0;
   res.send({ balance });
+});
+
+app.get("/nonce/:address", (req, res) => {
+  const { address } = req.params;
+  const nonce = nonces[address] || 0;
+  res.send({ nonce });
 });
 
 app.post("/send", (req, res) => {
@@ -37,10 +49,30 @@ app.post("/send", (req, res) => {
 
 
 
-  const { recipient, amount, signatureObj } = req.body;
+  const { sender, recipient, amount, signature, recoveryBit } = req.body;
 
-  const recoveredPublicKey = recoverPublicKey(signatureObj.hashedMessage, signatureObj.signature, 0);
-  const sender = '0x' + toHex(keccak256(recoveredPublicKey.slice(1)).slice(-20));
+  const document = {
+    sender: sender.toLowerCase(),
+    amount: parseInt(amount),
+    nonce: parseInt(nonces[sender.toLowerCase()]) + 1,
+    recipient: recipient.toLowerCase(),
+  }
+
+  console.log('sender', sender);
+  console.log(document.nonce);
+
+  const pKey = recoverPublicKey(
+    keccak256(utf8ToBytes(JSON.stringify(document))),
+    Uint8Array.from(signature.split(",")),
+    parseInt(recoveryBit)
+  );
+
+  let address = "0x" + toHex(keccak256(pKey.slice(1)).slice(-20));
+
+  if (address.toLowerCase() !== sender.toLowerCase()) {
+    res.status(400).send({ message: "Invalid signature!" });
+    return;
+  }
 
   setInitialBalance(sender);
   setInitialBalance(recipient);
@@ -50,7 +82,11 @@ app.post("/send", (req, res) => {
   } else {
     balances[sender] -= amount;
     balances[recipient] += amount;
-    res.send({ balance: balances[sender] });
+    nonces[sender.toLowerCase()]++;
+    res.send({ 
+      balance: balances[sender],
+      nonce: nonces[sender.toLowerCase()],
+    });
   }
 });
 
